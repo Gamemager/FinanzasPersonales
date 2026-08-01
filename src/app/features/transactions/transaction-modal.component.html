@@ -1,0 +1,139 @@
+<div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
+  <div class="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl bg-white dark:bg-gray-800 shadow-xl max-h-[90vh] overflow-y-auto">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Nuevo Movimiento</h2>
+      <button (click)="dismiss()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none">&times;</button>
+    </div>
+
+    <!-- Tabs de tipo -->
+    <div class="flex gap-2 px-6 pt-4">
+      @for (t of transactionTypes; track t) {
+        <button
+          type="button"
+          (click)="setType(t)"
+          [class.bg-indigo-600]="selectedType() === t"
+          [class.text-white]="selectedType() === t"
+          [class.bg-gray-100]="selectedType() !== t"
+          [class.text-gray-600]="selectedType() !== t"
+          [class.dark:bg-gray-700]="selectedType() !== t"
+          [class.dark:text-gray-200]="selectedType() !== t"
+          class="flex-1 rounded-lg py-2 text-sm font-medium capitalize transition-colors"
+        >
+          {{ t === 'expense' ? 'Gasto' : t === 'income' ? 'Ingreso' : 'Transferencia' }}
+        </button>
+      }
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" class="p-6 space-y-4">
+
+      @if (errorMessage(); as msg) {
+        <div class="rounded-lg bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-sm px-3 py-2">
+          {{ msg }}
+        </div>
+      }
+
+      <!-- Cuenta origen -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          {{ selectedType() === 'transfer' ? 'Cuenta origen (de dónde sale el dinero)' : 'Cuenta afectada' }}
+        </label>
+        <select formControlName="accountId" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm p-2.5">
+          <option value="" disabled>Selecciona una cuenta</option>
+          @for (acc of accounts(); track acc.id) {
+            <option [value]="acc.id">{{ acc.name }} ({{ acc.balance | currency:acc.currency:'symbol-narrow':'1.0-0' }})</option>
+          }
+        </select>
+      </div>
+
+      <!-- Cuenta destino (solo transferencias) -->
+      @if (selectedType() === 'transfer') {
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cuenta destino (a dónde llega el dinero)</label>
+          <select formControlName="destinationAccountId" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm p-2.5">
+            <option value="" disabled>Selecciona una cuenta</option>
+            @for (acc of accounts(); track acc.id) {
+              <option [value]="acc.id">{{ acc.name }}</option>
+            }
+          </select>
+        </div>
+      }
+
+      <!-- Categoría (solo ingreso/gasto, no aplica a transferencias) -->
+      @if (selectedType() !== 'transfer') {
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Categoría <span class="text-gray-400 font-normal">(para saber en qué se fue el dinero)</span>
+          </label>
+          <div class="flex gap-2">
+            <select formControlName="categoryId" class="flex-1 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm p-2.5">
+              <option value="">Sin categoría</option>
+              @for (cat of filteredCategories(); track cat.id) {
+                <option [value]="cat.id">{{ cat.name }}</option>
+              }
+            </select>
+            <button type="button" (click)="toggleNewCategory()"
+              class="rounded-lg border border-gray-300 dark:border-gray-600 px-3 text-sm text-gray-600 dark:text-gray-300">
+              +
+            </button>
+          </div>
+
+          @if (showNewCategoryInput()) {
+            <div class="flex gap-2 mt-2">
+              <input
+                [ngModel]="newCategoryName()"
+                (ngModelChange)="newCategoryName.set($event)"
+                [ngModelOptions]="{ standalone: true }"
+                placeholder="Ej: Comida, Transporte, Salario..."
+                class="flex-1 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm p-2"
+              />
+              <button type="button" (click)="createCategory()" class="rounded-lg bg-indigo-600 px-3 text-xs font-medium text-white">Crear</button>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Monto -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Monto (en pesos colombianos)</label>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+          <input
+            type="text"
+            inputmode="numeric"
+            appCurrencyInput
+            formControlName="amount"
+            placeholder="0"
+            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm p-2.5 pl-7"
+          />
+        </div>
+      </div>
+
+      <!-- Descripción -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Descripción (opcional)</label>
+        <input type="text" formControlName="description" placeholder="Ej: Mercado de la semana"
+          class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm p-2.5" />
+      </div>
+
+      <!-- Fecha -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha</label>
+        <input type="date" formControlName="date"
+          class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm p-2.5" />
+      </div>
+
+      <div class="flex gap-3 pt-2">
+        <button type="button" (click)="dismiss()"
+          class="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200">
+          Cancelar
+        </button>
+        <button type="submit" [disabled]="submitting()"
+          class="flex-1 rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+          {{ submitting() ? 'Guardando...' : 'Guardar' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,145 @@
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8 transition-colors">
+
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+    <div>
+      <h1 class="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">Resumen de tu situación financiera</p>
+    </div>
+    <button
+      (click)="openTransactionModal()"
+      class="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 active:bg-indigo-700 transition-colors"
+    >
+      <span class="text-lg leading-none">+</span> Nuevo movimiento
+    </button>
+  </div>
+
+  <!-- Net Worth Card -->
+  @if (netWorth(); as nw) {
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div class="md:col-span-1 rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-800 p-6 text-white shadow-lg">
+        <p class="text-sm text-indigo-100">Patrimonio Neto</p>
+        <p class="text-3xl font-bold mt-1">
+          {{ nw.netWorth | currency:'COP':'symbol-narrow':'1.0-0' }}
+        </p>
+      </div>
+
+      <div class="md:col-span-3 grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div class="rounded-xl bg-white dark:bg-gray-800 p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+          <p class="text-xs text-gray-500 dark:text-gray-400">Cuentas</p>
+          <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ nw.breakdown.totalAccounts | currency:'COP':'symbol-narrow':'1.0-0' }}</p>
+        </div>
+        <div class="rounded-xl bg-white dark:bg-gray-800 p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+          <p class="text-xs text-gray-500 dark:text-gray-400">Inversiones</p>
+          <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ nw.breakdown.totalInvestments | currency:'COP':'symbol-narrow':'1.0-0' }}</p>
+        </div>
+        <div class="rounded-xl bg-white dark:bg-gray-800 p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+          <p class="text-xs text-gray-500 dark:text-gray-400">Por Cobrar</p>
+          <p class="text-lg font-semibold text-green-600 dark:text-green-400">{{ nw.breakdown.totalToCollect | currency:'COP':'symbol-narrow':'1.0-0' }}</p>
+        </div>
+        <div class="rounded-xl bg-white dark:bg-gray-800 p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+          <p class="text-xs text-gray-500 dark:text-gray-400">Deudas</p>
+          <p class="text-lg font-semibold text-red-600 dark:text-red-400">{{ nw.breakdown.totalToPay | currency:'COP':'symbol-narrow':'1.0-0' }}</p>
+        </div>
+        <div class="rounded-xl bg-white dark:bg-gray-800 p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+          <p class="text-xs text-gray-500 dark:text-gray-400">Tarjetas</p>
+          <p class="text-lg font-semibold text-red-600 dark:text-red-400">{{ nw.breakdown.totalCardDebt | currency:'COP':'symbol-narrow':'1.0-0' }}</p>
+        </div>
+      </div>
+    </div>
+  } @else {
+    <div class="mb-8 h-24 rounded-2xl bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+  }
+
+  <!-- Gráficos -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Dona: gastos por categoría -->
+    <div class="lg:col-span-1 rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+      <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-4">Gastos por Categoría</h2>
+      @if (pieChartData().length > 0) {
+        <ngx-charts-pie-chart
+          [results]="pieChartData()"
+          [scheme]="colorScheme"
+          [labels]="true"
+          [doughnut]="true"
+          [gradient]="false"
+          [view]="[350, 300]"
+        />
+      } @else {
+        <p class="text-sm text-gray-400 text-center py-10">Sin gastos registrados aún</p>
+      }
+      <p class="text-[10px] text-gray-400 mt-2">
+        Los movimientos que registraste antes de tener categorías (o sin categoría asignada) se agrupan como "Sin categoría".
+        Nuevos gastos categorizados aparecerán como porciones adicionales.
+      </p>
+    </div>
+
+    <!-- Barras: ingresos vs gastos -->
+    <div class="lg:col-span-2 rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h2 class="text-base font-semibold text-gray-900 dark:text-white">Ingresos vs Gastos</h2>
+        <div class="flex items-center gap-2">
+          <div class="flex rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
+            @for (g of granularityOptions; track g) {
+              <button
+                (click)="setGranularity(g)"
+                [class.bg-indigo-600]="granularity() === g"
+                [class.text-white]="granularity() === g"
+                [class.text-gray-600]="granularity() !== g"
+                [class.dark:text-gray-300]="granularity() !== g"
+                class="px-3 py-1.5 text-xs font-medium"
+              >
+                {{ g === 'day' ? 'Día' : g === 'week' ? 'Semana' : 'Mes' }}
+              </button>
+            }
+          </div>
+          @if (granularity() === 'day') {
+            <input
+              type="month"
+              [value]="selectedMonth()"
+              (change)="onMonthChange($any($event.target).value)"
+              class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs p-1.5"
+            />
+          }
+        </div>
+      </div>
+      @if (barChartData()[0].series.length > 0) {
+        <ngx-charts-bar-vertical-2d
+          [results]="barChartData()"
+          [scheme]="colorScheme"
+          [xAxis]="true"
+          [yAxis]="true"
+          [legend]="true"
+          [gradient]="false"
+          [view]="[700, 300]"
+        />
+      } @else {
+        <p class="text-sm text-gray-400 text-center py-10">No hay movimientos en este período</p>
+      }
+    </div>
+  </div>
+
+  <!-- Cuentas -->
+  <div class="mt-8">
+    <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-4">Mis Cuentas</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      @for (account of accounts(); track account.id) {
+        <div class="rounded-xl bg-white dark:bg-gray-800 p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+          <p class="text-xs uppercase tracking-wide text-gray-400">{{ account.type }}</p>
+          <p class="font-medium text-gray-900 dark:text-white mt-1">{{ account.name }}</p>
+          <p class="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-2">
+            {{ account.balance | currency:account.currency:'symbol-narrow':'1.0-0' }}
+          </p>
+        </div>
+      } @empty {
+        <p class="text-sm text-gray-400 col-span-full text-center py-6">No tienes cuentas registradas todavía.</p>
+      }
+    </div>
+  </div>
+
+  <!-- Modal de transacción -->
+  @if (showTransactionModal()) {
+    <app-transaction-modal (closed)="onTransactionModalClosed($event)" />
+  }
+</div>
