@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, ElementRef, inject, OnInit, AfterViewInit, OnDestroy, signal, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgxChartsModule, Color, ScaleType } from '@swimlane/ngx-charts';
 import { DashboardService } from '../../core/services/dashboard.service';
@@ -13,9 +13,13 @@ type Granularity = 'day' | 'week' | 'month';
   imports: [CommonModule, NgxChartsModule, TransactionModalComponent],
   templateUrl: './dashboard.component.html',
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private dashboardService = inject(DashboardService);
   private accountService = inject(AccountService);
+
+  @ViewChild('barChartContainer') barChartContainer?: ElementRef<HTMLDivElement>;
+  readonly barChartWidth = signal(600);
+  private resizeObserver?: ResizeObserver;
 
   // Estado de UI
   readonly showTransactionModal = signal(false);
@@ -45,6 +49,8 @@ export class DashboardComponent implements OnInit {
     },
   ]);
 
+  readonly barChartView = computed<[number, number]>(() => [this.barChartWidth(), 300]);
+
   readonly colorScheme: Color = {
     name: 'finanzas',
     selectable: true,
@@ -54,6 +60,23 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadDashboardData();
+  }
+
+  ngAfterViewInit(): void {
+    if (!this.barChartContainer) return;
+    const el = this.barChartContainer.nativeElement;
+    this.updateBarChartWidth(el);
+    this.resizeObserver = new ResizeObserver(() => this.updateBarChartWidth(el));
+    this.resizeObserver.observe(el);
+  }
+
+  ngOnDestroy(): void {
+    this.resizeObserver?.disconnect();
+  }
+
+  private updateBarChartWidth(el: HTMLDivElement): void {
+    const width = el.clientWidth;
+    if (width > 0) this.barChartWidth.set(width);
   }
 
   private loadDashboardData(): void {

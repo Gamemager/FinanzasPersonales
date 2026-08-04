@@ -3,6 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { InvestmentService } from '../../core/services/investment.service';
 import { CurrencyInputDirective } from '../../shared/directives/currency-input.directive';
+import { Investment } from '../../core/models/finance.models';
+
+type ActionType = 'contribute' | 'update' | 'withdraw';
 
 @Component({
   selector: 'app-investments',
@@ -19,7 +22,6 @@ import { CurrencyInputDirective } from '../../shared/directives/currency-input.d
       </div>
       <p class="text-xs text-gray-400 mb-6">
         Registra cualquier lugar donde tengas dinero invertido: una fiducuenta, CDT, criptomonedas, acciones, etc.
-        El sistema calcula automáticamente tu rendimiento comparando lo invertido contra el valor actual.
       </p>
 
       @if (showForm()) {
@@ -27,8 +29,7 @@ import { CurrencyInputDirective } from '../../shared/directives/currency-input.d
           class="mb-6 grid grid-cols-1 sm:grid-cols-4 gap-3 rounded-xl bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700">
           <div>
             <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Plataforma o activo</label>
-            <input formControlName="platformName" placeholder="Ej: Binance, ETF S&P 500, Fiducuenta..." class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm p-2.5" />
-            <p class="text-[10px] text-gray-400 mt-1">Dónde está tu dinero invertido.</p>
+            <input formControlName="platformName" placeholder="Ej: Binance, ETF S&P 500..." class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm p-2.5" />
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Monto invertido (COP)</label>
@@ -37,7 +38,6 @@ import { CurrencyInputDirective } from '../../shared/directives/currency-input.d
               <input type="text" inputmode="numeric" appCurrencyInput formControlName="investedAmount" placeholder="0"
                 class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm p-2.5 pl-7" />
             </div>
-            <p class="text-[10px] text-gray-400 mt-1">Cuánto dinero has puesto en total, hasta hoy.</p>
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Notas (opcional)</label>
@@ -51,42 +51,68 @@ import { CurrencyInputDirective } from '../../shared/directives/currency-input.d
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         @for (inv of investments(); track inv.id) {
-          <div class="rounded-xl bg-white dark:bg-gray-800 p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-            <p class="font-medium text-gray-900 dark:text-white">{{ inv.platformName }}</p>
-            <p class="text-xs text-gray-400 mt-1">Invertido: {{ inv.investedAmount | currency:'COP':'symbol-narrow':'1.0-0' }}</p>
-            <p class="text-lg font-bold text-gray-900 dark:text-white mt-1">{{ inv.currentValue | currency:'COP':'symbol-narrow':'1.0-0' }}</p>
-            <p class="text-[10px] text-gray-400">Valor actual de mercado</p>
-            <p class="text-sm font-medium mt-1"
-               [class.text-green-600]="(inv.netReturn ?? 0) >= 0"
-               [class.text-red-600]="(inv.netReturn ?? 0) < 0">
-              {{ inv.netReturn ?? 0 | currency:'COP':'symbol-narrow':'1.0-0' }} ({{ inv.returnPercentage ?? 0 }}%)
-            </p>
-            <p class="text-[10px] text-gray-400">Ganancia o pérdida (valor actual - invertido)</p>
-
-            <div class="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-              <div>
-                <label class="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">Aportar más dinero</label>
-                <p class="text-[9px] text-gray-400 mb-1">Suma un nuevo aporte al total invertido.</p>
-                <div class="flex gap-1">
-                  <input #contribInput type="text" inputmode="numeric" placeholder="$ 0" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs p-1.5" />
-                  <button (click)="contribute(inv.id, contribInput.value); contribInput.value=''" class="text-xs text-indigo-600 hover:underline whitespace-nowrap">OK</button>
-                </div>
-              </div>
-              <div>
-                <label class="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">Actualizar valor actual</label>
-                <p class="text-[9px] text-gray-400 mb-1">Cuánto vale hoy tu inversión en el mercado.</p>
-                <div class="flex gap-1">
-                  <input #valueInput type="text" inputmode="numeric" placeholder="$ 0" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs p-1.5" />
-                  <button (click)="updateValue(inv.id, valueInput.value); valueInput.value=''" class="text-xs text-gray-600 dark:text-gray-300 hover:underline whitespace-nowrap">OK</button>
-                </div>
-              </div>
+          @let isPositive = (inv.netReturn ?? 0) >= 0;
+          <div class="rounded-xl bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-1">
+              <p class="font-medium text-gray-900 dark:text-white">{{ inv.platformName }}</p>
+              <button (click)="remove(inv.id)" class="text-gray-300 hover:text-red-500 text-xs" title="Eliminar inversión">✕</button>
             </div>
-            <button (click)="remove(inv.id)" class="text-xs text-red-500 hover:underline mt-2">Eliminar inversión</button>
+            <p class="text-xs text-gray-400 mb-1">Valor actual</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ inv.currentValue | currency:'COP':'symbol-narrow':'1.0-0' }}</p>
+
+            <div class="flex items-center gap-2 mt-2 mb-3">
+              <span class="text-xs px-2 py-0.5 rounded-full"
+                [class.bg-green-100]="isPositive" [class.text-green-700]="isPositive"
+                [class.bg-red-100]="!isPositive" [class.text-red-700]="!isPositive">
+                {{ isPositive ? '+' : '' }}{{ inv.returnPercentage ?? 0 }}%
+              </span>
+              <span class="text-xs text-gray-400">desde que invertiste {{ inv.investedAmount | currency:'COP':'symbol-narrow':'1.0-0' }}</span>
+            </div>
+
+            <div class="h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden mb-4">
+              <div class="h-full rounded-full"
+                [class.bg-green-500]="isPositive" [class.bg-red-500]="!isPositive"
+                [style.width.%]="progressWidth(inv)"></div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+              <button (click)="openModal(inv, 'contribute')" class="flex flex-col items-center gap-1 py-2 text-xs text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                <span class="text-base leading-none">＋</span>Aportar
+              </button>
+              <button (click)="openModal(inv, 'update')" class="flex flex-col items-center gap-1 py-2 text-xs text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                <span class="text-base leading-none">↻</span>Actualizar
+              </button>
+              <button (click)="openModal(inv, 'withdraw')" class="flex flex-col items-center gap-1 py-2 text-xs text-red-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                <span class="text-base leading-none">↓</span>Retirar
+              </button>
+            </div>
           </div>
         } @empty {
           <p class="text-sm text-gray-400 col-span-full text-center py-6">No tienes inversiones registradas.</p>
         }
       </div>
+
+      <!-- Modal de acción (aportar / actualizar / retirar) -->
+      @if (actionTarget(); as target) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div class="w-full max-w-sm rounded-2xl bg-white dark:bg-gray-800 shadow-xl p-6">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-white mb-1">{{ modalTitle() }}</h3>
+            <p class="text-xs text-gray-400 mb-4">{{ target.platformName }} · valor actual {{ target.currentValue | currency:'COP':'symbol-narrow':'1.0-0' }}</p>
+
+            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{{ modalFieldLabel() }}</label>
+            <div class="relative mb-4">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+              <input #amountInput type="text" inputmode="numeric" appCurrencyInput placeholder="0"
+                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm p-2.5 pl-7" />
+            </div>
+
+            <div class="flex gap-3">
+              <button type="button" (click)="actionTarget.set(null)" class="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200">Cancelar</button>
+              <button type="button" (click)="confirmAction(amountInput.value)" class="flex-1 rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white">Confirmar</button>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `,
 })
@@ -96,6 +122,9 @@ export class InvestmentsComponent implements OnInit {
 
   readonly investments = this.investmentService.investments;
   readonly showForm = signal(false);
+
+  readonly actionTarget = signal<Investment | null>(null);
+  readonly actionType = signal<ActionType>('contribute');
 
   form = this.fb.nonNullable.group({
     platformName: ['', Validators.required],
@@ -116,20 +145,48 @@ export class InvestmentsComponent implements OnInit {
     });
   }
 
-  contribute(id: string, amount: string): void {
-    const n = Number(amount.replace(/[^\d]/g, ''));
-    if (!n) return;
-    this.investmentService.contribute(id, n).subscribe();
-  }
-
-  updateValue(id: string, value: string): void {
-    const n = Number(value.replace(/[^\d]/g, ''));
-    if (!n) return;
-    this.investmentService.updateValue(id, n).subscribe();
-  }
-
   remove(id: string): void {
     if (!confirm('¿Eliminar esta inversión? Esta acción no se puede deshacer.')) return;
     this.investmentService.delete(id).subscribe();
+  }
+
+  progressWidth(inv: Investment): number {
+    const pct = Math.abs(inv.returnPercentage ?? 0);
+    return Math.min(pct, 100);
+  }
+
+  openModal(inv: Investment, type: ActionType): void {
+    this.actionTarget.set(inv);
+    this.actionType.set(type);
+  }
+
+  modalTitle(): string {
+    const type = this.actionType();
+    return type === 'contribute' ? 'Aportar más dinero' : type === 'update' ? 'Actualizar valor actual' : 'Retirar dinero';
+  }
+
+  modalFieldLabel(): string {
+    const type = this.actionType();
+    return type === 'contribute'
+      ? 'Monto a aportar'
+      : type === 'update'
+        ? 'Nuevo valor total de la inversión'
+        : 'Monto a retirar';
+  }
+
+  confirmAction(rawValue: string): void {
+    const target = this.actionTarget();
+    const n = Number(rawValue.replace(/[^\d]/g, ''));
+    if (!target || !n) return;
+
+    const type = this.actionType();
+    const obs =
+      type === 'contribute'
+        ? this.investmentService.contribute(target.id, n)
+        : type === 'update'
+          ? this.investmentService.updateValue(target.id, n)
+          : this.investmentService.withdraw(target.id, n);
+
+    obs.subscribe(() => this.actionTarget.set(null));
   }
 }

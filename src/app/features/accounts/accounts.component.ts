@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AccountService } from '../../core/services/account.service';
 import { TransactionService } from '../../core/services/transaction.service';
+import { CategoryService } from '../../core/services/category.service';
 import { AccountType } from '../../core/models/finance.models';
 import { CurrencyInputDirective } from '../../shared/directives/currency-input.directive';
 
@@ -55,7 +56,7 @@ import { CurrencyInputDirective } from '../../shared/directives/currency-input.d
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         @for (acc of accounts(); track acc.id) {
-          <div class="rounded-xl bg-white dark:bg-gray-800 p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div class="rounded-xl bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700">
             <p class="text-xs uppercase text-gray-400">{{ acc.type }}</p>
             <p class="font-medium text-gray-900 dark:text-white mt-1">{{ acc.name }}</p>
             <p class="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-2">{{ acc.balance | currency:acc.currency:'symbol-narrow':'1.0-0' }}</p>
@@ -69,10 +70,26 @@ import { CurrencyInputDirective } from '../../shared/directives/currency-input.d
 
             @if (expandedAccountId() === acc.id) {
               <div class="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3">
+
+                <!-- Filtros -->
+                <div class="grid grid-cols-3 gap-2 mb-3">
+                  <input type="date" [value]="filterFrom()" (change)="onFilterChange('from', $any($event.target).value)"
+                    class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-[11px] p-1.5" />
+                  <input type="date" [value]="filterTo()" (change)="onFilterChange('to', $any($event.target).value)"
+                    class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-[11px] p-1.5" />
+                  <select [value]="filterCategoryId()" (change)="onFilterChange('categoryId', $any($event.target).value)"
+                    class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-[11px] p-1.5">
+                    <option value="">Todas</option>
+                    @for (cat of categories(); track cat.id) {
+                      <option [value]="cat.id">{{ cat.name }}</option>
+                    }
+                  </select>
+                </div>
+
                 @if (loadingHistory()) {
                   <p class="text-xs text-gray-400">Cargando...</p>
                 } @else if (accountTransactions().length === 0) {
-                  <p class="text-xs text-gray-400">No hay movimientos registrados en esta cuenta.</p>
+                  <p class="text-xs text-gray-400">No hay movimientos en el rango seleccionado.</p>
                 } @else {
                   <div class="space-y-2 max-h-64 overflow-y-auto">
                     @for (tx of accountTransactions(); track tx.id) {
@@ -90,6 +107,7 @@ import { CurrencyInputDirective } from '../../shared/directives/currency-input.d
                       </div>
                     }
                   </div>
+                  <p class="text-[10px] text-gray-400 mt-2">{{ accountTransactions().length }} movimientos en el rango seleccionado</p>
                 }
               </div>
             }
@@ -105,13 +123,19 @@ export class AccountsComponent implements OnInit {
   private fb = inject(FormBuilder);
   private accountService = inject(AccountService);
   private transactionService = inject(TransactionService);
+  private categoryService = inject(CategoryService);
 
   readonly accounts = this.accountService.accounts;
+  readonly categories = this.categoryService.categories;
   readonly showForm = signal(false);
 
   readonly expandedAccountId = signal<string | null>(null);
   readonly loadingHistory = signal(false);
   readonly accountTransactions = signal<any[]>([]);
+
+  readonly filterFrom = signal('');
+  readonly filterTo = signal('');
+  readonly filterCategoryId = signal('');
 
   form = this.fb.nonNullable.group({
     name: ['', Validators.required],
@@ -122,6 +146,7 @@ export class AccountsComponent implements OnInit {
 
   ngOnInit(): void {
     this.accountService.fetchAll().subscribe();
+    this.categoryService.fetchAll().subscribe();
   }
 
   submit(): void {
@@ -144,8 +169,29 @@ export class AccountsComponent implements OnInit {
       return;
     }
     this.expandedAccountId.set(accountId);
+    this.filterFrom.set('');
+    this.filterTo.set('');
+    this.filterCategoryId.set('');
+    this.loadHistory(accountId);
+  }
+
+  onFilterChange(field: 'from' | 'to' | 'categoryId', value: string): void {
+    if (field === 'from') this.filterFrom.set(value);
+    if (field === 'to') this.filterTo.set(value);
+    if (field === 'categoryId') this.filterCategoryId.set(value);
+
+    const accountId = this.expandedAccountId();
+    if (accountId) this.loadHistory(accountId);
+  }
+
+  private loadHistory(accountId: string): void {
     this.loadingHistory.set(true);
-    this.transactionService.fetchAll({ accountId }).subscribe({
+    const filters: any = { accountId };
+    if (this.filterFrom()) filters.from = this.filterFrom();
+    if (this.filterTo()) filters.to = this.filterTo();
+    if (this.filterCategoryId()) filters.categoryId = this.filterCategoryId();
+
+    this.transactionService.fetchAll(filters).subscribe({
       next: (res: any) => {
         this.accountTransactions.set(res.data ?? this.transactionService.transactions());
         this.loadingHistory.set(false);

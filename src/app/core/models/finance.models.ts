@@ -55,6 +55,7 @@ export interface CreditCard {
   closingDay: number;
   dueDay: number;
   currentBalance: string;
+  interestRateEA?: string | null;
 }
 
 export interface CardTransaction {

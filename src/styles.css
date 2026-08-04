@@ -9,3 +9,11 @@ body {
   margin: 0;
   font-family: 'Inter', system-ui, sans-serif;
 }
+
+.tooltip-anchor,
+.ngx-charts .bar-group rect.bar-hover,
+ngx-charts-bar-vertical-2d rect[fill]:not(.bar),
+ngx-charts-bar-vertical-2d .tooltip-anchor {
+  fill: transparent !important;
+  stroke: none !important;
+}

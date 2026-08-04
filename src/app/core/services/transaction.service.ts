@@ -8,6 +8,7 @@ export interface TransactionFilters {
   from?: string;
   to?: string;
   accountId?: string;
+  categoryId?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -28,6 +29,7 @@ export class TransactionService {
     if (filters.from) params = params.set('from', filters.from);
     if (filters.to) params = params.set('to', filters.to);
     if (filters.accountId) params = params.set('accountId', filters.accountId);
+    if (filters.categoryId) params = params.set('categoryId', filters.categoryId);
 
     return this.http.get<ApiResponse<Transaction[]>>(this.baseUrl, { params }).pipe(
       tap((res) => {

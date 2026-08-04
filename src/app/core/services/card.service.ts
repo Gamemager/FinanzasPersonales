@@ -44,4 +44,14 @@ export class CardService {
       tap(() => this.fetchAll().subscribe()),
     );
   }
+
+  payInstallment(
+    cardId: string,
+    cardTxId: string,
+    payload: { accountId: string; installmentsToPay: number; date: string },
+  ) {
+    return this.http
+      .post<ApiResponse<any>>(`${this.baseUrl}/${cardId}/purchases/${cardTxId}/pay`, payload)
+      .pipe(tap(() => this.fetchAll().subscribe()));
+  }
 }

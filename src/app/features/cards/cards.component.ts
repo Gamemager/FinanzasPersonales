@@ -27,13 +27,14 @@ interface InstallmentRow {
         </button>
       </div>
       <p class="text-xs text-gray-400 mb-6">
-        El <strong>día de corte</strong> es cuando se cierra tu ciclo de facturación (después de esa fecha las compras pasan al siguiente extracto).
-        El <strong>día límite de pago</strong> es la fecha antes de la cual debes pagar sin generar intereses.
+        El <strong>día de corte</strong> es cuando se cierra tu ciclo de facturación. El <strong>día límite de pago</strong>
+        es la fecha antes de la cual debes pagar sin generar intereses. La <strong>tasa EA</strong> (efectiva anual) es
+        solo informativa, para que sepas cuánto te cuesta financiar con esa tarjeta.
       </p>
 
       @if (showCardForm()) {
         <form [formGroup]="cardForm" (ngSubmit)="submitCard()"
-          class="mb-6 grid grid-cols-1 sm:grid-cols-5 gap-3 rounded-xl bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700">
+          class="mb-6 grid grid-cols-1 sm:grid-cols-6 gap-3 rounded-xl bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700">
           <div>
             <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Nombre de la tarjeta</label>
             <input formControlName="name" placeholder="Ej: Visa Bancolombia" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm p-2.5" />
@@ -54,6 +55,10 @@ interface InstallmentRow {
             <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Día límite de pago (1-31)</label>
             <input formControlName="dueDay" type="number" min="1" max="31" placeholder="Ej: 25" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm p-2.5" />
           </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Tasa EA % (opcional)</label>
+            <input formControlName="interestRateEA" type="number" step="0.01" min="0" placeholder="Ej: 28.5" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm p-2.5" />
+          </div>
           <div class="flex items-end">
             <button type="submit" class="w-full rounded-lg bg-indigo-600 text-sm font-semibold text-white p-2.5">Guardar tarjeta</button>
           </div>
@@ -62,9 +67,12 @@ interface InstallmentRow {
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         @for (card of cards(); track card.id) {
-          <div class="rounded-xl bg-white dark:bg-gray-800 p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div class="rounded-xl bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700">
             <p class="font-medium text-gray-900 dark:text-white">{{ card.name }}</p>
-            <p class="text-xs text-gray-400 mt-1">Corte: día {{ card.closingDay }} · Pago: día {{ card.dueDay }}</p>
+            <p class="text-xs text-gray-400 mt-1">
+              Corte: día {{ card.closingDay }} · Pago: día {{ card.dueDay }}
+              @if (card.interestRateEA) { · Tasa EA: {{ card.interestRateEA }}% }
+            </p>
             <p class="text-lg font-bold text-red-600 dark:text-red-400 mt-2">{{ card.currentBalance | currency:'COP':'symbol-narrow':'1.0-0' }}</p>
             <p class="text-xs text-gray-400">Límite: {{ card.creditLimit | currency:'COP':'symbol-narrow':'1.0-0' }}</p>
 
@@ -72,7 +80,7 @@ interface InstallmentRow {
               <button (click)="selectedCardId.set(card.id); showPurchaseForm.set(true); showPayForm.set(false)"
                 class="text-xs text-indigo-600 hover:underline">+ Registrar compra</button>
               <button (click)="selectedCardId.set(card.id); showPayForm.set(true); showPurchaseForm.set(false)"
-                class="text-xs text-green-600 hover:underline">Pagar tarjeta</button>
+                class="text-xs text-green-600 hover:underline">Pagar tarjeta completa</button>
               <button (click)="toggleProjection(card.id)"
                 class="text-xs text-gray-500 dark:text-gray-400 hover:underline">
                 {{ expandedCardId() === card.id ? 'Ocultar cuotas' : 'Ver cuotas' }}
@@ -88,24 +96,19 @@ interface InstallmentRow {
                 } @else if (projectionRows().length === 0) {
                   <p class="text-xs text-gray-400">Esta tarjeta no tiene compras registradas.</p>
                 } @else {
-                  <table class="w-full text-xs">
-                    <thead>
-                      <tr class="text-gray-400 text-left">
-                        <th class="font-medium pb-1">Compra</th>
-                        <th class="font-medium pb-1">Cuota</th>
-                        <th class="font-medium pb-1 text-right">Restantes</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (row of projectionRows(); track row.id) {
-                        <tr class="border-t border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200">
-                          <td class="py-1.5">{{ row.description || 'Sin descripción' }}</td>
-                          <td class="py-1.5">{{ row.installmentAmount | currency:'COP':'symbol-narrow':'1.0-0' }}</td>
-                          <td class="py-1.5 text-right">{{ row.remainingInstallments }}</td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
+                  <div class="space-y-2">
+                    @for (row of projectionRows(); track row.id) {
+                      <div class="flex items-center justify-between text-xs">
+                        <div class="min-w-0">
+                          <p class="text-gray-700 dark:text-gray-200 truncate">{{ row.description || 'Sin descripción' }}</p>
+                          <p class="text-gray-400">Cuota {{ row.installmentAmount | currency:'COP':'symbol-narrow':'1.0-0' }} · {{ row.remainingInstallments }} restantes</p>
+                        </div>
+                        @if (row.remainingInstallments > 0) {
+                          <button (click)="openAbonoModal(card.id, row)" class="text-xs text-indigo-600 hover:underline whitespace-nowrap ml-2">Abonar</button>
+                        }
+                      </div>
+                    }
+                  </div>
                   <p class="text-xs font-medium text-gray-600 dark:text-gray-300 mt-2">
                     Compromiso mensual total: {{ totalMonthlyCommitment() | currency:'COP':'symbol-narrow':'1.0-0' }}
                   </p>
@@ -176,6 +179,41 @@ interface InstallmentRow {
           </div>
         </form>
       }
+
+      <!-- Modal de abono a compra específica -->
+      @if (abonoTarget(); as target) {
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div class="w-full max-w-sm rounded-2xl bg-white dark:bg-gray-800 shadow-xl p-6">
+            <h3 class="text-base font-semibold text-gray-900 dark:text-white mb-1">Abonar a: {{ target.description || 'esta compra' }}</h3>
+            <p class="text-xs text-gray-400 mb-4">Cuota: {{ target.installmentAmount | currency:'COP':'symbol-narrow':'1.0-0' }} · {{ target.remainingInstallments }} cuotas restantes</p>
+
+            <form [formGroup]="abonoForm" (ngSubmit)="submitAbono()" class="space-y-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">¿Cuántas cuotas quieres pagar?</label>
+                <input formControlName="installmentsToPay" type="number" [max]="target.remainingInstallments" min="1"
+                  class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm p-2.5" />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Cuenta desde la que pagas</label>
+                <select formControlName="accountId" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm p-2.5">
+                  <option value="" disabled>Selecciona una cuenta</option>
+                  @for (acc of accounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.name }}</option>
+                  }
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Fecha</label>
+                <input formControlName="date" type="date" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm p-2.5" />
+              </div>
+              <div class="flex gap-3 pt-2">
+                <button type="button" (click)="abonoTarget.set(null)" class="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200">Cancelar</button>
+                <button type="submit" class="flex-1 rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white">Abonar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
     </div>
   `,
 })
@@ -197,11 +235,15 @@ export class CardsComponent implements OnInit {
   readonly projectionRows = signal<InstallmentRow[]>([]);
   readonly totalMonthlyCommitment = signal(0);
 
+  readonly abonoTarget = signal<InstallmentRow | null>(null);
+  private abonoCardId = '';
+
   cardForm = this.fb.nonNullable.group({
     name: ['', Validators.required],
     creditLimit: [0, Validators.required],
     closingDay: [1, Validators.required],
     dueDay: [10, Validators.required],
+    interestRateEA: [null as number | null],
   });
 
   purchaseForm = this.fb.nonNullable.group({
@@ -217,6 +259,12 @@ export class CardsComponent implements OnInit {
     date: [new Date().toISOString().substring(0, 10), Validators.required],
   });
 
+  abonoForm = this.fb.nonNullable.group({
+    installmentsToPay: [1, [Validators.required, Validators.min(1)]],
+    accountId: ['', Validators.required],
+    date: [new Date().toISOString().substring(0, 10), Validators.required],
+  });
+
   ngOnInit(): void {
     this.cardService.fetchAll().subscribe();
     this.accountService.fetchAll().subscribe();
@@ -225,9 +273,11 @@ export class CardsComponent implements OnInit {
   submitCard(): void {
     if (this.cardForm.invalid) return;
     const raw = this.cardForm.getRawValue();
-    this.cardService.create({ ...raw, creditLimit: String(raw.creditLimit) }).subscribe(() => {
+    const payload: any = { ...raw, creditLimit: String(raw.creditLimit) };
+    if (!payload.interestRateEA) delete payload.interestRateEA;
+    this.cardService.create(payload).subscribe(() => {
       this.showCardForm.set(false);
-      this.cardForm.reset({ name: '', creditLimit: 0, closingDay: 1, dueDay: 10 });
+      this.cardForm.reset({ name: '', creditLimit: 0, closingDay: 1, dueDay: 10, interestRateEA: null });
     });
   }
 
@@ -272,6 +322,21 @@ export class CardsComponent implements OnInit {
         this.loadingProjection.set(false);
       },
       error: () => this.loadingProjection.set(false),
+    });
+  }
+
+  openAbonoModal(cardId: string, row: InstallmentRow): void {
+    this.abonoCardId = cardId;
+    this.abonoTarget.set(row);
+    this.abonoForm.reset({ installmentsToPay: 1, accountId: '', date: new Date().toISOString().substring(0, 10) });
+  }
+
+  submitAbono(): void {
+    const target = this.abonoTarget();
+    if (!target || this.abonoForm.invalid) return;
+    this.cardService.payInstallment(this.abonoCardId, target.id, this.abonoForm.getRawValue()).subscribe(() => {
+      this.abonoTarget.set(null);
+      this.loadProjection(this.abonoCardId);
     });
   }
 }
