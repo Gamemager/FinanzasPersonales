@@ -8,6 +8,15 @@ import { ApiResponse, AuthResponse, User } from '../models/finance.models';
 const TOKEN_KEY = 'finanzas_token';
 const USER_KEY = 'finanzas_user';
 
+export interface RegisterPayload {
+  firstName: string;
+  lastName: string;
+  phoneCountryCode: string;
+  phoneNumber: string;
+  email: string;
+  password: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   // ---- Estado reactivo con Signals ----
@@ -20,9 +29,9 @@ export class AuthService {
 
   constructor(private http: HttpClient, private router: Router) {}
 
-  register(email: string, password: string) {
+  register(payload: RegisterPayload) {
     return this.http
-      .post<ApiResponse<AuthResponse>>(`${environment.apiUrl}/auth/register`, { email, password })
+      .post<ApiResponse<AuthResponse>>(`${environment.apiUrl}/auth/register`, payload)
       .pipe(tap((res) => this.setSession(res.data)));
   }
 
@@ -30,6 +39,39 @@ export class AuthService {
     return this.http
       .post<ApiResponse<AuthResponse>>(`${environment.apiUrl}/auth/login`, { email, password })
       .pipe(tap((res) => this.setSession(res.data)));
+  }
+
+  forgotPassword(email: string) {
+    return this.http.post<ApiResponse<null>>(`${environment.apiUrl}/auth/forgot-password`, { email });
+  }
+
+  resetPassword(token: string, newPassword: string) {
+    return this.http.post<ApiResponse<null>>(`${environment.apiUrl}/auth/reset-password`, { token, newPassword });
+  }
+
+  fetchProfile() {
+    return this.http.get<ApiResponse<User>>(`${environment.apiUrl}/auth/me`).pipe(
+      tap((res) => {
+        this._user.set(res.data);
+        localStorage.setItem(USER_KEY, JSON.stringify(res.data));
+      }),
+    );
+  }
+
+  updateProfile(payload: { phoneCountryCode: string; phoneNumber: string }) {
+    return this.http.put<ApiResponse<User>>(`${environment.apiUrl}/auth/me`, payload).pipe(
+      tap((res) => {
+        this._user.set(res.data);
+        localStorage.setItem(USER_KEY, JSON.stringify(res.data));
+      }),
+    );
+  }
+
+  changePassword(currentPassword: string, newPassword: string) {
+    return this.http.put<ApiResponse<null>>(`${environment.apiUrl}/auth/me/password`, {
+      currentPassword,
+      newPassword,
+    });
   }
 
   logout(): void {

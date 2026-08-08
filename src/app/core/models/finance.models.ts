@@ -1,6 +1,10 @@
 export interface User {
   id: string;
   email: string;
+  firstName?: string;
+  lastName?: string;
+  phoneCountryCode?: string;
+  phoneNumber?: string;
   createdAt?: string;
 }
 
@@ -128,6 +132,20 @@ export interface MonthlyIncomeExpense {
   month: string;
   income: number;
   expense: number;
+}
+
+export type RecurrenceType = 'monthly' | 'days';
+
+export interface UpcomingPurchase {
+  id: string;
+  userId: string;
+  name: string;
+  amount: string;
+  comment?: string | null;
+  dueDate: string;
+  isRecurring: boolean;
+  recurrenceType?: RecurrenceType | null;
+  recurrenceIntervalDays?: number | null;
 }
 
 export interface ApiResponse<T> {

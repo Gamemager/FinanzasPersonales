@@ -93,6 +93,8 @@ export class ShellComponent {
     { path: '/cards', label: 'Tarjetas', icon: '💳' },
     { path: '/investments', label: 'Inversiones', icon: '📈' },
     { path: '/loans', label: 'Préstamos', icon: '🤝' },
+    { path: '/upcoming-purchases', label: 'Próximas Compras', icon: '🛒' },
+    { path: '/profile', label: 'Mi Perfil', icon: '👤' },
   ];
 
   toggleSidebar(): void {

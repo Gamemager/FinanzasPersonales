@@ -10,6 +10,10 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
 }
 
+/* ngx-charts dibuja rectángulos invisibles para detectar el hover/tooltip
+   por cada grupo de barras. Sin la hoja de estilos oficial de la librería
+   (que esbuild no puede resolver en este setup), esos rectángulos se ven
+   como una caja gris sólida. Los forzamos a ser transparentes. */
 .tooltip-anchor,
 .ngx-charts .bar-group rect.bar-hover,
 ngx-charts-bar-vertical-2d rect[fill]:not(.bar),

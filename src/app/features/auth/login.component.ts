@@ -27,7 +27,10 @@ import { AuthService } from '../../core/services/auth.service';
               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm p-2.5" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contraseña</label>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Contraseña</label>
+              <a routerLink="/auth/forgot-password" class="text-xs text-indigo-600 dark:text-indigo-400">¿Olvidaste tu contraseña?</a>
+            </div>
             <input type="password" formControlName="password"
               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm p-2.5" />
           </div>

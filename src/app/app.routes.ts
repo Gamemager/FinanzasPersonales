@@ -14,6 +14,16 @@ export const routes: Routes = [
         path: 'register',
         loadComponent: () => import('./features/auth/register.component').then((m) => m.RegisterComponent),
       },
+      {
+        path: 'forgot-password',
+        loadComponent: () =>
+          import('./features/auth/forgot-password.component').then((m) => m.ForgotPasswordComponent),
+      },
+      {
+        path: 'reset-password',
+        loadComponent: () =>
+          import('./features/auth/reset-password.component').then((m) => m.ResetPasswordComponent),
+      },
     ],
   },
   {
@@ -40,6 +50,15 @@ export const routes: Routes = [
       {
         path: 'loans',
         loadComponent: () => import('./features/loans/loans.component').then((m) => m.LoansComponent),
+      },
+      {
+        path: 'upcoming-purchases',
+        loadComponent: () =>
+          import('./features/upcoming-purchases/upcoming-purchases.component').then((m) => m.UpcomingPurchasesComponent),
+      },
+      {
+        path: 'profile',
+        loadComponent: () => import('./features/profile/profile.component').then((m) => m.ProfileComponent),
       },
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
     ],
