@@ -45,6 +45,12 @@ export class TransactionService {
       .pipe(tap((res) => this._transactions.update((list) => [res.data, ...list])));
   }
 
+  update(id: string, payload: Partial<Transaction>) {
+    return this.http
+      .put<ApiResponse<Transaction>>(`${this.baseUrl}/${id}`, payload)
+      .pipe(tap((res) => this._transactions.update((list) => list.map((t) => (t.id === id ? res.data : t)))));
+  }
+
   delete(id: string) {
     return this.http
       .delete<ApiResponse<null>>(`${this.baseUrl}/${id}`)

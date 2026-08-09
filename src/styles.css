@@ -10,6 +10,28 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
 }
 
+/* Scrollbar delgado y discreto para listas internas (historial de movimientos, etc.) */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(203 213 225) transparent; /* thumb / track, modo claro */
+}
+.thin-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgb(203 213 225);
+  border-radius: 9999px;
+}
+.dark .thin-scrollbar {
+  scrollbar-color: rgb(75 85 99) transparent; /* modo oscuro */
+}
+.dark .thin-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgb(75 85 99);
+}
+
 /* ngx-charts dibuja rectángulos invisibles para detectar el hover/tooltip
    por cada grupo de barras. Sin la hoja de estilos oficial de la librería
    (que esbuild no puede resolver en este setup), esos rectángulos se ven

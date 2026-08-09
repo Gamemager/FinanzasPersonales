@@ -3,7 +3,7 @@
 
     <!-- Header -->
     <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Nuevo Movimiento</h2>
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ isEditMode() ? 'Editar Movimiento' : 'Nuevo Movimiento' }}</h2>
       <button (click)="dismiss()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none">&times;</button>
     </div>
 
@@ -131,7 +131,7 @@
         </button>
         <button type="submit" [disabled]="submitting()"
           class="flex-1 rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
-          {{ submitting() ? 'Guardando...' : 'Guardar' }}
+          {{ submitting() ? 'Guardando...' : (isEditMode() ? 'Guardar cambios' : 'Guardar') }}
         </button>
       </div>
     </form>

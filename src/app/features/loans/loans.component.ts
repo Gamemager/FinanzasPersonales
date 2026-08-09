@@ -84,7 +84,7 @@ import { CurrencyInputDirective } from '../../shared/directives/currency-input.d
               <div class="mt-3">
                 <label class="block text-[10px] text-gray-400 mb-1">Registrar abono (COP)</label>
                 <div class="flex gap-1">
-                  <input #paymentInput type="text" inputmode="numeric" placeholder="$ 0" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs p-1.5" />
+                  <input #paymentInput type="text" inputmode="numeric" appCurrencyInput placeholder="$ 0" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs p-1.5" />
                   <button (click)="addPayment(loan.id, paymentInput.value); paymentInput.value=''" class="text-xs text-indigo-600 hover:underline whitespace-nowrap">Registrar</button>
                 </div>
               </div>

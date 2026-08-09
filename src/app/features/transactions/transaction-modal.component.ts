@@ -1,10 +1,10 @@
-import { Component, EventEmitter, computed, inject, OnInit, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Input, computed, inject, OnInit, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TransactionService } from '../../core/services/transaction.service';
 import { AccountService } from '../../core/services/account.service';
 import { CategoryService } from '../../core/services/category.service';
-import { TransactionType } from '../../core/models/finance.models';
+import { Transaction, TransactionType } from '../../core/models/finance.models';
 import { CurrencyInputDirective } from '../../shared/directives/currency-input.directive';
 
 @Component({
@@ -14,7 +14,9 @@ import { CurrencyInputDirective } from '../../shared/directives/currency-input.d
   templateUrl: './transaction-modal.component.html',
 })
 export class TransactionModalComponent implements OnInit {
-  @Output() closed = new EventEmitter<boolean>(); // emite true si se creó una transacción
+  /** Si se pasa, el modal entra en modo edición y precarga estos datos. */
+  @Input() editTransaction: Transaction | null = null;
+  @Output() closed = new EventEmitter<boolean>(); // emite true si se creó/editó una transacción
 
   private fb = inject(FormBuilder);
   private transactionService = inject(TransactionService);
@@ -28,10 +30,10 @@ export class TransactionModalComponent implements OnInit {
   readonly showNewCategoryInput = signal(false);
   readonly newCategoryName = signal('');
 
-  // Tipado explícito para que el @for del template no infiera "string" genérico
+  readonly isEditMode = computed(() => !!this.editTransaction);
+
   readonly transactionTypes: TransactionType[] = ['expense', 'income', 'transfer'];
 
-  // Solo mostramos categorías que apliquen al tipo de movimiento actual (income/expense)
   readonly filteredCategories = computed(() =>
     this.categoryService
       .categories()
@@ -53,11 +55,26 @@ export class TransactionModalComponent implements OnInit {
       this.accountService.fetchAll().subscribe();
     }
     this.categoryService.fetchAll().subscribe();
+
+    if (this.editTransaction) {
+      const tx = this.editTransaction;
+      this.selectedType.set(tx.type);
+      this.form.patchValue({
+        type: tx.type,
+        accountId: tx.accountId,
+        destinationAccountId: tx.destinationAccountId ?? '',
+        categoryId: tx.categoryId ?? '',
+        amount: Number(tx.amount),
+        description: tx.description ?? '',
+        date: tx.date,
+      });
+    }
   }
 
   setType(type: TransactionType): void {
     this.selectedType.set(type);
-    this.form.patchValue({ type, categoryId: '' });
+    this.form.patchValue({ categoryId: '' });
+    this.form.patchValue({ type });
   }
 
   toggleNewCategory(): void {
@@ -87,8 +104,6 @@ export class TransactionModalComponent implements OnInit {
     const raw = this.form.getRawValue();
     const payload: any = { ...raw, amount: String(raw.amount) };
 
-    // Campos UUID: nunca enviar "" al backend, o Postgres rechaza con 500
-    // (invalid input syntax for type uuid). Se convierten a null o se eliminan.
     if (!payload.categoryId) delete payload.categoryId;
     if (payload.type === 'transfer') {
       if (!payload.destinationAccountId) {
@@ -100,14 +115,18 @@ export class TransactionModalComponent implements OnInit {
       delete payload.destinationAccountId;
     }
 
-    this.transactionService.create(payload).subscribe({
+    const request = this.editTransaction
+      ? this.transactionService.update(this.editTransaction.id, payload)
+      : this.transactionService.create(payload);
+
+    request.subscribe({
       next: () => {
         this.submitting.set(false);
         this.closed.emit(true);
       },
       error: (err) => {
         this.submitting.set(false);
-        this.errorMessage.set(err?.error?.message ?? 'No se pudo registrar el movimiento');
+        this.errorMessage.set(err?.error?.message ?? 'No se pudo guardar el movimiento');
       },
     });
   }

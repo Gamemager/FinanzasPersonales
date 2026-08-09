@@ -4,13 +4,14 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AccountService } from '../../core/services/account.service';
 import { TransactionService } from '../../core/services/transaction.service';
 import { CategoryService } from '../../core/services/category.service';
-import { AccountType } from '../../core/models/finance.models';
+import { AccountType, Transaction } from '../../core/models/finance.models';
 import { CurrencyInputDirective } from '../../shared/directives/currency-input.directive';
+import { TransactionModalComponent } from '../transactions/transaction-modal.component';
 
 @Component({
   selector: 'app-accounts',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, CurrencyInputDirective],
+  imports: [CommonModule, ReactiveFormsModule, CurrencyInputDirective, TransactionModalComponent],
   template: `
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
       <div class="flex items-center justify-between mb-2">
@@ -91,19 +92,23 @@ import { CurrencyInputDirective } from '../../shared/directives/currency-input.d
                 } @else if (accountTransactions().length === 0) {
                   <p class="text-xs text-gray-400">No hay movimientos en el rango seleccionado.</p>
                 } @else {
-                  <div class="space-y-2 max-h-64 overflow-y-auto">
+                  <div class="space-y-2 max-h-64 overflow-y-auto pr-1 thin-scrollbar">
                     @for (tx of accountTransactions(); track tx.id) {
-                      <div class="flex items-center justify-between text-xs">
+                      <div class="flex items-center justify-between text-xs group">
                         <div class="min-w-0">
                           <p class="text-gray-700 dark:text-gray-200 truncate">{{ tx.description || (tx.category?.name ?? 'Sin descripción') }}</p>
                           <p class="text-gray-400">{{ tx.date }} · {{ tx.category?.name ?? 'Sin categoría' }}</p>
                         </div>
-                        <p class="font-medium whitespace-nowrap ml-2"
-                           [class.text-green-600]="tx.type === 'income'"
-                           [class.text-red-600]="tx.type === 'expense'"
-                           [class.text-indigo-600]="tx.type === 'transfer'">
-                          {{ tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : '' }}{{ tx.amount | currency:'COP':'symbol-narrow':'1.0-0' }}
-                        </p>
+                        <div class="flex items-center gap-2 ml-2 flex-shrink-0">
+                          <p class="font-medium whitespace-nowrap"
+                             [class.text-green-600]="tx.type === 'income'"
+                             [class.text-red-600]="tx.type === 'expense'"
+                             [class.text-indigo-600]="tx.type === 'transfer'">
+                            {{ tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : '' }}{{ tx.amount | currency:'COP':'symbol-narrow':'1.0-0' }}
+                          </p>
+                          <button (click)="editTransaction.set(tx)" class="text-gray-300 hover:text-indigo-500" title="Editar">✎</button>
+                          <button (click)="removeTransaction(tx.id)" class="text-gray-300 hover:text-red-500" title="Eliminar">✕</button>
+                        </div>
                       </div>
                     }
                   </div>
@@ -116,6 +121,10 @@ import { CurrencyInputDirective } from '../../shared/directives/currency-input.d
           <p class="text-sm text-gray-400 col-span-full text-center py-6">No tienes cuentas registradas todavía.</p>
         }
       </div>
+
+      @if (editTransaction(); as tx) {
+        <app-transaction-modal [editTransaction]="tx" (closed)="onEditModalClosed($event)" />
+      }
     </div>
   `,
 })
@@ -136,6 +145,7 @@ export class AccountsComponent implements OnInit {
   readonly filterFrom = signal('');
   readonly filterTo = signal('');
   readonly filterCategoryId = signal('');
+  readonly editTransaction = signal<Transaction | null>(null);
 
   form = this.fb.nonNullable.group({
     name: ['', Validators.required],
@@ -198,5 +208,23 @@ export class AccountsComponent implements OnInit {
       },
       error: () => this.loadingHistory.set(false),
     });
+  }
+
+  removeTransaction(txId: string): void {
+    if (!confirm('¿Eliminar este movimiento? Esto revertirá su efecto en el saldo de la cuenta.')) return;
+    this.transactionService.delete(txId).subscribe(() => {
+      this.accountService.fetchAll().subscribe();
+      const accountId = this.expandedAccountId();
+      if (accountId) this.loadHistory(accountId);
+    });
+  }
+
+  onEditModalClosed(saved: boolean): void {
+    this.editTransaction.set(null);
+    if (saved) {
+      this.accountService.fetchAll().subscribe();
+      const accountId = this.expandedAccountId();
+      if (accountId) this.loadHistory(accountId);
+    }
   }
 }
