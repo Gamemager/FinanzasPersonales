@@ -35,11 +35,23 @@ export class CardService {
     return this.http.post<ApiResponse<any>>(`${this.baseUrl}/${cardId}/transactions`, payload);
   }
 
+  updatePurchase(cardId: string, cardTxId: string, payload: any) {
+    return this.http.put<ApiResponse<any>>(`${this.baseUrl}/${cardId}/transactions/${cardTxId}`, payload);
+  }
+
+  deletePurchase(cardId: string, cardTxId: string) {
+    return this.http.delete<ApiResponse<null>>(`${this.baseUrl}/${cardId}/transactions/${cardTxId}`);
+  }
+
   getProjection(cardId: string) {
     return this.http.get<ApiResponse<any>>(`${this.baseUrl}/${cardId}/projection`);
   }
 
-  pay(cardId: string, payload: { accountId: string; amount: number; date: string }) {
+  getPayments(cardId: string) {
+    return this.http.get<ApiResponse<any[]>>(`${this.baseUrl}/${cardId}/payments`);
+  }
+
+  pay(cardId: string, payload: { accountId: string; amount: number; date: string; categoryId?: string }) {
     return this.http.post<ApiResponse<any>>(`${this.baseUrl}/${cardId}/pay`, payload).pipe(
       tap(() => this.fetchAll().subscribe()),
     );
@@ -48,7 +60,7 @@ export class CardService {
   payInstallment(
     cardId: string,
     cardTxId: string,
-    payload: { accountId: string; installmentsToPay: number; date: string },
+    payload: { accountId: string; installmentsToPay?: number; amount?: number; date: string },
   ) {
     return this.http
       .post<ApiResponse<any>>(`${this.baseUrl}/${cardId}/purchases/${cardTxId}/pay`, payload)
