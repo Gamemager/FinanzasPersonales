@@ -16,37 +16,53 @@
 
   <!-- Net Worth Card -->
   @if (netWorth(); as nw) {
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
       <div class="md:col-span-1 rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-800 p-6 text-white shadow-lg">
         <p class="text-sm text-indigo-100">Patrimonio Neto</p>
         <p class="text-3xl font-bold mt-1">
-          {{ nw.netWorth | currency:'COP':'symbol-narrow':'1.0-0' }}
+          {{ filteredNetWorth() | currency:'COP':'symbol-narrow':'1.0-0' }}
         </p>
       </div>
 
       <div class="md:col-span-3 grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <div class="rounded-xl bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700">
+        <button (click)="toggleNetWorthComponent('accounts')"
+          class="text-left rounded-xl bg-white dark:bg-gray-800 p-4 border transition-opacity"
+          [class.border-gray-100]="netWorthIncluded().accounts" [class.dark:border-gray-700]="netWorthIncluded().accounts"
+          [class.border-indigo-300]="!netWorthIncluded().accounts" [class.opacity-40]="!netWorthIncluded().accounts">
           <p class="text-xs text-gray-500 dark:text-gray-400">Cuentas</p>
           <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ nw.breakdown.totalAccounts | currency:'COP':'symbol-narrow':'1.0-0' }}</p>
-        </div>
-        <div class="rounded-xl bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700">
+        </button>
+        <button (click)="toggleNetWorthComponent('investments')"
+          class="text-left rounded-xl bg-white dark:bg-gray-800 p-4 border transition-opacity"
+          [class.border-gray-100]="netWorthIncluded().investments" [class.dark:border-gray-700]="netWorthIncluded().investments"
+          [class.border-indigo-300]="!netWorthIncluded().investments" [class.opacity-40]="!netWorthIncluded().investments">
           <p class="text-xs text-gray-500 dark:text-gray-400">Inversiones</p>
           <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ nw.breakdown.totalInvestments | currency:'COP':'symbol-narrow':'1.0-0' }}</p>
-        </div>
-        <div class="rounded-xl bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700">
+        </button>
+        <button (click)="toggleNetWorthComponent('toCollect')"
+          class="text-left rounded-xl bg-white dark:bg-gray-800 p-4 border transition-opacity"
+          [class.border-gray-100]="netWorthIncluded().toCollect" [class.dark:border-gray-700]="netWorthIncluded().toCollect"
+          [class.border-indigo-300]="!netWorthIncluded().toCollect" [class.opacity-40]="!netWorthIncluded().toCollect">
           <p class="text-xs text-gray-500 dark:text-gray-400">Por Cobrar</p>
           <p class="text-lg font-semibold text-green-600 dark:text-green-400">{{ nw.breakdown.totalToCollect | currency:'COP':'symbol-narrow':'1.0-0' }}</p>
-        </div>
-        <div class="rounded-xl bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700">
+        </button>
+        <button (click)="toggleNetWorthComponent('toPay')"
+          class="text-left rounded-xl bg-white dark:bg-gray-800 p-4 border transition-opacity"
+          [class.border-gray-100]="netWorthIncluded().toPay" [class.dark:border-gray-700]="netWorthIncluded().toPay"
+          [class.border-indigo-300]="!netWorthIncluded().toPay" [class.opacity-40]="!netWorthIncluded().toPay">
           <p class="text-xs text-gray-500 dark:text-gray-400">Deudas</p>
           <p class="text-lg font-semibold text-red-600 dark:text-red-400">{{ nw.breakdown.totalToPay | currency:'COP':'symbol-narrow':'1.0-0' }}</p>
-        </div>
-        <div class="rounded-xl bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700">
+        </button>
+        <button (click)="toggleNetWorthComponent('cardDebt')"
+          class="text-left rounded-xl bg-white dark:bg-gray-800 p-4 border transition-opacity"
+          [class.border-gray-100]="netWorthIncluded().cardDebt" [class.dark:border-gray-700]="netWorthIncluded().cardDebt"
+          [class.border-indigo-300]="!netWorthIncluded().cardDebt" [class.opacity-40]="!netWorthIncluded().cardDebt">
           <p class="text-xs text-gray-500 dark:text-gray-400">Tarjetas</p>
           <p class="text-lg font-semibold text-red-600 dark:text-red-400">{{ nw.breakdown.totalCardDebt | currency:'COP':'symbol-narrow':'1.0-0' }}</p>
-        </div>
+        </button>
       </div>
     </div>
+    <p class="text-[10px] text-gray-400 mb-8">Toca una tarjeta para incluirla/excluirla del Patrimonio Neto.</p>
   } @else {
     <div class="mb-8 h-24 rounded-2xl bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
   }
@@ -56,7 +72,49 @@
 
     <!-- Dona: gastos por categoría -->
     <div class="lg:col-span-1 rounded-2xl bg-white dark:bg-gray-800 p-6 border border-gray-100 dark:border-gray-700">
-      <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-4">Gastos por Categoría</h2>
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <h2 class="text-base font-semibold text-gray-900 dark:text-white">Gastos por Categoría</h2>
+        <div class="flex rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
+          @for (g of granularityOptions; track g) {
+            <button
+              (click)="setPieGranularity(g)"
+              [class.bg-indigo-600]="pieGranularity() === g" [class.text-white]="pieGranularity() === g"
+              [class.text-gray-600]="pieGranularity() !== g" [class.dark:text-gray-300]="pieGranularity() !== g"
+              class="px-2.5 py-1 text-xs font-medium"
+            >
+              {{ g === 'day' ? 'Día' : g === 'week' ? 'Semana' : 'Mes' }}
+            </button>
+          }
+        </div>
+      </div>
+      @if (pieGranularity() === 'day') {
+        <input
+          type="month"
+          [value]="pieSelectedMonth()"
+          (change)="onPieMonthChange($any($event.target).value)"
+          class="mb-3 rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-xs p-1.5"
+        />
+      }
+
+      @if (allCategoryNames().length > 0) {
+        <button (click)="showPieCategoryFilter.set(!showPieCategoryFilter())" class="text-xs text-indigo-600 dark:text-indigo-400 mb-2">
+          {{ showPieCategoryFilter() ? 'Ocultar filtro de categorías' : 'Filtrar categorías' }}
+        </button>
+        @if (showPieCategoryFilter()) {
+          <div class="flex flex-wrap gap-1.5 mb-3">
+            @for (name of allCategoryNames(); track name) {
+              <button (click)="toggleCategory(name)"
+                class="rounded-full px-2.5 py-1 text-[10px] font-medium border"
+                [class.bg-indigo-600]="!isCategoryExcluded(name)" [class.text-white]="!isCategoryExcluded(name)" [class.border-indigo-600]="!isCategoryExcluded(name)"
+                [class.bg-gray-50]="isCategoryExcluded(name)" [class.text-gray-400]="isCategoryExcluded(name)" [class.border-gray-200]="isCategoryExcluded(name)"
+                [class.dark:bg-gray-700]="isCategoryExcluded(name)" [class.dark:border-gray-600]="isCategoryExcluded(name)">
+                {{ name }}
+              </button>
+            }
+          </div>
+        }
+      }
+
       @if (pieChartData().length > 0) {
         <ngx-charts-pie-chart
           [results]="pieChartData()"
@@ -67,7 +125,7 @@
           [view]="[350, 300]"
         />
       } @else {
-        <p class="text-sm text-gray-400 text-center py-10">Sin gastos registrados aún</p>
+        <p class="text-sm text-gray-400 text-center py-10">Sin gastos registrados en este período</p>
       }
       <p class="text-[10px] text-gray-400 mt-2">
         Los movimientos que registraste antes de tener categorías (o sin categoría asignada) se agrupan como "Sin categoría".

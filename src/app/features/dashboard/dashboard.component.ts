@@ -6,6 +6,7 @@ import { AccountService } from '../../core/services/account.service';
 import { TransactionModalComponent } from '../transactions/transaction-modal.component';
 
 type Granularity = 'day' | 'week' | 'month';
+type NetWorthComponent = 'accounts' | 'investments' | 'toCollect' | 'toPay' | 'cardDebt';
 
 @Component({
   selector: 'app-dashboard',
@@ -27,15 +28,47 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly granularityOptions: Granularity[] = ['day', 'week', 'month'];
   readonly selectedMonth = signal(new Date().toISOString().substring(0, 7)); // YYYY-MM, solo aplica para granularity="day"
 
+  // Filtro del gráfico de dona: mismo estilo día/semana/mes, independiente del de barras
+  readonly pieGranularity = signal<Granularity>('month');
+  readonly pieSelectedMonth = signal(new Date().toISOString().substring(0, 7));
+  readonly showPieCategoryFilter = signal(false);
+  readonly excludedCategories = signal<Set<string>>(new Set());
+
+  // Filtro de Patrimonio Neto: qué componentes incluir en el número grande
+  readonly netWorthIncluded = signal<Record<NetWorthComponent, boolean>>({
+    accounts: true,
+    investments: true,
+    toCollect: true,
+    toPay: true,
+    cardDebt: true,
+  });
+
   // Datos expuestos directamente desde los servicios (Signals)
   readonly netWorth = this.dashboardService.netWorth;
   readonly expensesByCategory = this.dashboardService.expensesByCategory;
   readonly monthlyData = this.dashboardService.monthlyData;
   readonly accounts = this.accountService.accounts;
 
-  // Computed: transforma los datos del backend al formato que espera ngx-charts
+  // Patrimonio neto recalculado según los checkboxes marcados
+  readonly filteredNetWorth = computed(() => {
+    const nw = this.netWorth();
+    if (!nw) return 0;
+    const inc = this.netWorthIncluded();
+    const assets =
+      (inc.accounts ? nw.breakdown.totalAccounts : 0) +
+      (inc.investments ? nw.breakdown.totalInvestments : 0) +
+      (inc.toCollect ? nw.breakdown.totalToCollect : 0);
+    const liabilities = (inc.toPay ? nw.breakdown.totalToPay : 0) + (inc.cardDebt ? nw.breakdown.totalCardDebt : 0);
+    return assets - liabilities;
+  });
+
+  readonly allCategoryNames = computed(() => this.expensesByCategory().map((e) => e.categoryName));
+
+  // Computed: transforma los datos del backend al formato que espera ngx-charts, excluyendo categorías desmarcadas
   readonly pieChartData = computed(() =>
-    this.expensesByCategory().map((e) => ({ name: e.categoryName, value: e.total })),
+    this.expensesByCategory()
+      .filter((e) => !this.excludedCategories().has(e.categoryName))
+      .map((e) => ({ name: e.categoryName, value: e.total })),
   );
 
   readonly barChartData = computed(() => [
@@ -81,7 +114,7 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private loadDashboardData(): void {
     this.dashboardService.fetchNetWorth().subscribe();
-    this.dashboardService.fetchExpensesByCategory().subscribe();
+    this.loadPieChart();
     this.loadIncomeExpenseChart();
     this.accountService.fetchAll().subscribe();
   }
@@ -106,6 +139,60 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
     } else {
       this.dashboardService.fetchMonthlyIncomeExpense(g).subscribe();
     }
+  }
+
+  // ---- Filtro del gráfico de dona ----
+
+  setPieGranularity(g: Granularity): void {
+    this.pieGranularity.set(g);
+    this.loadPieChart();
+  }
+
+  onPieMonthChange(value: string): void {
+    this.pieSelectedMonth.set(value);
+    this.loadPieChart();
+  }
+
+  private loadPieChart(): void {
+    const g = this.pieGranularity();
+    const today = new Date();
+
+    if (g === 'day') {
+      const [year, month] = this.pieSelectedMonth().split('-').map(Number);
+      const from = new Date(year, month - 1, 1).toISOString().substring(0, 10);
+      const to = new Date(year, month, 0).toISOString().substring(0, 10);
+      this.dashboardService.fetchExpensesByCategory(from, to).subscribe();
+    } else if (g === 'week') {
+      const start = new Date(today);
+      start.setDate(start.getDate() - 7);
+      this.dashboardService
+        .fetchExpensesByCategory(start.toISOString().substring(0, 10), today.toISOString().substring(0, 10))
+        .subscribe();
+    } else {
+      const start = new Date(today.getFullYear(), today.getMonth(), 1);
+      this.dashboardService
+        .fetchExpensesByCategory(start.toISOString().substring(0, 10), today.toISOString().substring(0, 10))
+        .subscribe();
+    }
+  }
+
+  toggleCategory(name: string): void {
+    this.excludedCategories.update((set) => {
+      const next = new Set(set);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }
+
+  isCategoryExcluded(name: string): boolean {
+    return this.excludedCategories().has(name);
+  }
+
+  // ---- Filtro de Patrimonio Neto ----
+
+  toggleNetWorthComponent(component: NetWorthComponent): void {
+    this.netWorthIncluded.update((inc) => ({ ...inc, [component]: !inc[component] }));
   }
 
   openTransactionModal(): void {

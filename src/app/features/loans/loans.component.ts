@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LoanService } from '../../core/services/loan.service';
@@ -55,8 +55,37 @@ import { CurrencyInputDirective } from '../../shared/directives/currency-input.d
         </form>
       }
 
+      <div class="flex flex-wrap gap-3 mb-4">
+        <div class="flex gap-1">
+          @for (f of statusFilterOptions; track f) {
+            <button
+              (click)="statusFilter.set(f)"
+              [class.bg-indigo-600]="statusFilter() === f" [class.text-white]="statusFilter() === f"
+              [class.bg-gray-100]="statusFilter() !== f" [class.text-gray-600]="statusFilter() !== f"
+              [class.dark:bg-gray-700]="statusFilter() !== f" [class.dark:text-gray-300]="statusFilter() !== f"
+              class="rounded-lg px-3 py-1.5 text-xs font-medium"
+            >
+              {{ f === 'all' ? 'Todos' : f === 'active' ? 'Activos' : 'Pagados' }}
+            </button>
+          }
+        </div>
+        <div class="flex gap-1">
+          @for (f of typeFilterOptions; track f) {
+            <button
+              (click)="typeFilter.set(f)"
+              [class.bg-indigo-600]="typeFilter() === f" [class.text-white]="typeFilter() === f"
+              [class.bg-gray-100]="typeFilter() !== f" [class.text-gray-600]="typeFilter() !== f"
+              [class.dark:bg-gray-700]="typeFilter() !== f" [class.dark:text-gray-300]="typeFilter() !== f"
+              class="rounded-lg px-3 py-1.5 text-xs font-medium"
+            >
+              {{ f === 'all' ? 'Todos' : f === 'lent_by_me' ? 'Me deben' : 'Debo' }}
+            </button>
+          }
+        </div>
+      </div>
+
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        @for (loan of loans(); track loan.id) {
+        @for (loan of filteredLoans(); track loan.id) {
           <div class="rounded-xl bg-white dark:bg-gray-800 p-4 shadow-sm border border-gray-100 dark:border-gray-700">
             <div class="flex items-center justify-between">
               <p class="font-medium text-gray-900 dark:text-white">{{ loan.personName }}</p>
@@ -112,6 +141,21 @@ export class LoansComponent implements OnInit {
 
   readonly loans = this.loanService.loans;
   readonly showForm = signal(false);
+
+  readonly statusFilter = signal<'all' | 'active' | 'paid'>('all');
+  readonly typeFilter = signal<'all' | 'lent_by_me' | 'borrowed_by_me'>('all');
+  readonly statusFilterOptions: Array<'all' | 'active' | 'paid'> = ['all', 'active', 'paid'];
+  readonly typeFilterOptions: Array<'all' | 'lent_by_me' | 'borrowed_by_me'> = ['all', 'lent_by_me', 'borrowed_by_me'];
+
+  readonly filteredLoans = computed(() => {
+    const status = this.statusFilter();
+    const type = this.typeFilter();
+    return this.loans().filter((l) => {
+      const statusMatch = status === 'all' || (status === 'active' && l.status !== 'paid') || (status === 'paid' && l.status === 'paid');
+      const typeMatch = type === 'all' || l.type === type;
+      return statusMatch && typeMatch;
+    });
+  });
 
   form = this.fb.nonNullable.group({
     personName: ['', Validators.required],
