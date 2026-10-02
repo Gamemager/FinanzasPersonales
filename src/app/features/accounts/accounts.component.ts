@@ -7,6 +7,7 @@ import { CategoryService } from '../../core/services/category.service';
 import { AccountType, Transaction } from '../../core/models/finance.models';
 import { CurrencyInputDirective } from '../../shared/directives/currency-input.directive';
 import { TransactionModalComponent } from '../transactions/transaction-modal.component';
+import { ExportService } from '../../core/services/export.service';
 
 @Component({
   selector: 'app-accounts',
@@ -16,10 +17,13 @@ import { TransactionModalComponent } from '../transactions/transaction-modal.com
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
       <div class="flex items-center justify-between mb-2">
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Mis Cuentas</h1>
+        <div class="flex gap-2">
+        <button (click)="exportThis()" class="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2.5 text-xs font-medium text-gray-600 dark:text-gray-300">⬇ Exportar</button>
         <button (click)="showForm.set(!showForm())"
           class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white">
           {{ showForm() ? 'Cancelar' : '+ Nueva cuenta' }}
         </button>
+        </div>
       </div>
       <p class="text-xs text-gray-400 mb-6">
         Una cuenta es cualquier lugar donde guardas dinero: efectivo en tu bolsillo, una cuenta bancaria,
@@ -131,6 +135,11 @@ import { TransactionModalComponent } from '../transactions/transaction-modal.com
 export class AccountsComponent implements OnInit {
   private fb = inject(FormBuilder);
   private accountService = inject(AccountService);
+  private exportService = inject(ExportService);
+
+  exportThis(): void {
+    this.exportService.export('accounts');
+  }
   private transactionService = inject(TransactionService);
   private categoryService = inject(CategoryService);
 

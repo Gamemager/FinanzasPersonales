@@ -5,6 +5,7 @@ import { CardService } from '../../core/services/card.service';
 import { AccountService } from '../../core/services/account.service';
 import { CategoryService } from '../../core/services/category.service';
 import { CurrencyInputDirective } from '../../shared/directives/currency-input.directive';
+import { ExportService } from '../../core/services/export.service';
 
 interface InstallmentRow {
   id: string;
@@ -36,10 +37,13 @@ interface CardPayment {
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
       <div class="flex items-center justify-between mb-2">
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Tarjetas de Crédito</h1>
+        <div class="flex gap-2">
+        <button (click)="exportThis()" class="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2.5 text-xs font-medium text-gray-600 dark:text-gray-300">⬇ Exportar</button>
         <button (click)="showCardForm.set(!showCardForm())"
           class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white">
           {{ showCardForm() ? 'Cancelar' : '+ Nueva tarjeta' }}
         </button>
+        </div>
       </div>
       <p class="text-xs text-gray-400 mb-6">
         El <strong>día de corte</strong> es cuando se cierra tu ciclo de facturación. El <strong>día límite de pago</strong>
@@ -419,6 +423,11 @@ interface CardPayment {
 })
 export class CardsComponent implements OnInit {
   private fb = inject(FormBuilder);
+  private exportService = inject(ExportService);
+
+  exportThis(): void {
+    this.exportService.export('cards');
+  }
   private cardService = inject(CardService);
   private accountService = inject(AccountService);
   private categoryService = inject(CategoryService);

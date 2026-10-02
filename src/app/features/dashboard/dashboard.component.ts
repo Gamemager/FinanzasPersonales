@@ -4,6 +4,7 @@ import { NgxChartsModule, Color, ScaleType } from '@swimlane/ngx-charts';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { AccountService } from '../../core/services/account.service';
 import { TransactionModalComponent } from '../transactions/transaction-modal.component';
+import { ExportService } from '../../core/services/export.service';
 
 type Granularity = 'day' | 'week' | 'month';
 type NetWorthComponent = 'accounts' | 'investments' | 'toCollect' | 'toPay' | 'cardDebt';
@@ -17,6 +18,11 @@ type NetWorthComponent = 'accounts' | 'investments' | 'toCollect' | 'toPay' | 'c
 export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private dashboardService = inject(DashboardService);
   private accountService = inject(AccountService);
+  private exportService = inject(ExportService);
+
+  exportAll(): void {
+    this.exportService.export('all');
+  }
 
   @ViewChild('barChartContainer') barChartContainer?: ElementRef<HTMLDivElement>;
   readonly barChartWidth = signal(600);

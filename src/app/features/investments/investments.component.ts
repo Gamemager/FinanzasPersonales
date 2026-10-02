@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { InvestmentService } from '../../core/services/investment.service';
 import { CurrencyInputDirective } from '../../shared/directives/currency-input.directive';
+import { ExportService } from '../../core/services/export.service';
 import { Investment } from '../../core/models/finance.models';
 
 type ActionType = 'contribute' | 'update' | 'withdraw';
@@ -15,10 +16,13 @@ type ActionType = 'contribute' | 'update' | 'withdraw';
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
       <div class="flex items-center justify-between mb-2">
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Inversiones</h1>
+        <div class="flex gap-2">
+        <button (click)="exportThis()" class="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2.5 text-xs font-medium text-gray-600 dark:text-gray-300">⬇ Exportar</button>
         <button (click)="showForm.set(!showForm())"
           class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white">
           {{ showForm() ? 'Cancelar' : '+ Nueva inversión' }}
         </button>
+        </div>
       </div>
       <p class="text-xs text-gray-400 mb-6">
         Registra cualquier lugar donde tengas dinero invertido: una fiducuenta, CDT, criptomonedas, acciones, etc.
@@ -118,6 +122,11 @@ type ActionType = 'contribute' | 'update' | 'withdraw';
 })
 export class InvestmentsComponent implements OnInit {
   private fb = inject(FormBuilder);
+  private exportService = inject(ExportService);
+
+  exportThis(): void {
+    this.exportService.export('investments');
+  }
   private investmentService = inject(InvestmentService);
 
   readonly investments = this.investmentService.investments;
